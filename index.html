@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>LenteLab RA</title>
+<script src="lib/aframe.min.js"></script>
+<script src="lib/aframe-ar.js"></script>
+<style>
+[hidden]{display:none!important}
+:root{--bg:#0B1018;--fg:#E7EDF4;--muted:#95A3B5;--holo:#6FE3E8;--amber:#F3B44E;--line:#243245}
+html{background:#000}
+html,body{margin:0;height:100%;overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--fg)}
+.top{position:fixed;left:0;right:0;top:0;z-index:10;padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 10px;
+  background:linear-gradient(rgba(11,16,24,.85),rgba(11,16,24,0));display:flex;align-items:center;gap:10px;pointer-events:none}
+.brand{font-weight:700;letter-spacing:.02em}.brand b{color:var(--holo)}
+.status{font-size:13px;color:var(--muted);margin-left:auto;text-align:right}
+.status.found{color:var(--holo)}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:10;padding:14px 16px calc(env(safe-area-inset-bottom,0px) + 16px);
+  background:rgba(11,16,24,.9);border-top:1px solid var(--line);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.sheet h2{margin:0 0 4px;font-size:18px;color:var(--holo)}
+.sheet p{margin:0;font-size:14px;line-height:1.5;color:var(--muted)}
+.parts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.parts button{font:inherit;font-size:13px;background:#162131;color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:6px 12px}
+.parts button.on{border-color:var(--holo);color:var(--holo)}
+.err{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg);text-align:center;line-height:1.5}
+</style>
+<script>
+const THREE = AFRAME.THREE;
+const C={holo:0x6FE3E8,amber:0xF3B44E,rose:0xF07A8B,violet:0xA58BF0,orange:0xF39A4E,fg:0xE7EDF4};
+const M=(c,o)=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.45,metalness:.1},o||{}));
+
+function buildCell(){
+  const g=new THREE.Group(),ticks=[];
+  g.add(new THREE.Mesh(new THREE.SphereGeometry(2.2,48,32),M(C.holo,{transparent:true,opacity:.22,depthWrite:false,side:THREE.DoubleSide})));
+  g.add(new THREE.Mesh(new THREE.SphereGeometry(2.21,28,18),new THREE.MeshBasicMaterial({color:C.holo,wireframe:true,transparent:true,opacity:.12})));
+  g.add(new THREE.Mesh(new THREE.SphereGeometry(.75,40,28),M(C.violet)));
+  const nl=new THREE.Mesh(new THREE.SphereGeometry(.28,24,16),M(0x5B3FC4));nl.position.set(.3,.25,.5);g.add(nl);
+  for(let i=0;i<5;i++){const t=new THREE.Mesh(new THREE.TorusGeometry(1.0+i*.13,.035,8,48,Math.PI*1.15),M(C.rose));t.rotation.set(Math.PI/2+i*.12,0,-.4+i*.15);g.add(t)}
+  for(let i=0;i<4;i++){const t=new THREE.Mesh(new THREE.TorusGeometry(.42-i*.04,.06,8,24,Math.PI),M(C.amber));t.position.set(1.15+i*.13,-.75-i*.05,.5);t.rotation.set(0,.6,Math.PI/2);g.add(t)}
+  [[-1.4,.6,.6],[-.9,-1.2,.9],[1.1,1.1,-.6],[-.4,1.3,-1.1],[.4,-1.1,-1.2]].forEach((p,i)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(.22,24,16),M(C.orange));m.scale.set(2.1,1,1);m.position.set(...p);m.rotation.y=i;g.add(m);ticks.push(t=>{m.rotation.z=Math.sin(t*1.3+i)*.5})});
+  const N=160,pos=new Float32Array(N*3);for(let i=0;i<N;i++){let v;do{v=new THREE.Vector3(Math.random()*4-2,Math.random()*4-2,Math.random()*4-2)}while(v.length()>1.95||v.length()<1.0);pos.set([v.x,v.y,v.z],i*3)}
+  const pg=new THREE.BufferGeometry();pg.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  g.add(new THREE.Points(pg,new THREE.PointsMaterial({color:C.fg,size:.05,transparent:true,opacity:.8})));
+  return {g,tick:t=>ticks.forEach(f=>f(t))};
+}
+function buildNN(){
+  const g=new THREE.Group(),xs=[-3.4,-1.7,0,1.7,3.4],layers=[];
+  layers.push([0,1,2].map(i=>{const b=new THREE.Mesh(new THREE.BoxGeometry(.9,.4,.4),M(C.amber));b.position.set(xs[0],.8-i*.8,0);g.add(b);return b.position}));
+  const ring=(n,x,col,r)=>{const a=[];for(let i=0;i<n;i++){const s=new THREE.Mesh(new THREE.SphereGeometry(r,20,14),M(col));s.position.set(x,(i-(n-1)/2)*.5,i%2?.35:-.35);g.add(s);a.push(s.position)}return a};
+  layers.push(ring(6,xs[1],C.holo,.13));layers.push(ring(7,xs[2],C.violet,.15));layers.push(ring(7,xs[3],C.violet,.15));
+  layers.push([.62,.21,.11,.06].map((p,i)=>{const w=.3+p*2.2;const b=new THREE.Mesh(new THREE.BoxGeometry(w,.26,.26),M(i===0?C.rose:0x7a5560));b.position.set(xs[4]-.4+w/2,.75-i*.5,0);g.add(b);return new THREE.Vector3(xs[4]-.4,.75-i*.5,0)}));
+  const em=new THREE.LineBasicMaterial({color:C.holo,transparent:true,opacity:.25});
+  for(let l=0;l<layers.length-1;l++)layers[l].forEach(a=>layers[l+1].forEach(b=>g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([a,b]),em))));
+  const pulses=[];
+  for(let i=0;i<22;i++){const s=new THREE.Mesh(new THREE.SphereGeometry(.07,10,8),new THREE.MeshBasicMaterial({color:C.amber}));g.add(s);
+    const l=Math.floor(Math.random()*4);pulses.push({s,l,t:Math.random(),a:layers[l][Math.floor(Math.random()*layers[l].length)],b:layers[l+1][Math.floor(Math.random()*layers[l+1].length)]})}
+  let last=0;
+  return {g,tick:t=>{const dt=Math.min(Math.max(t-last,0),.05);last=t;pulses.forEach(p=>{p.t+=dt*1.1;if(p.t>=1){p.t=0;p.l=(p.l+1)%4;p.a=p.l===0?layers[0][Math.floor(Math.random()*3)]:p.b;p.b=layers[p.l+1][Math.floor(Math.random()*layers[p.l+1].length)]}p.s.position.lerpVectors(p.a,p.b,p.t)})}};
+}
+function buildChain(){
+  const g=new THREE.Group(),blocks=[];
+  for(let i=0;i<5;i++){
+    const x=-4+i*2;
+    const b=new THREE.Mesh(new THREE.BoxGeometry(1.1,1.1,1.1),M(C.holo,{transparent:true,opacity:.3,depthWrite:false}));b.position.set(x,0,0);g.add(b);blocks.push(b);
+    const e=new THREE.LineSegments(new THREE.EdgesGeometry(b.geometry),new THREE.LineBasicMaterial({color:C.holo}));e.position.copy(b.position);g.add(e);
+    for(let k=0;k<3;k++){const c=new THREE.Mesh(new THREE.BoxGeometry(.22,.22,.22),M(C.amber));c.position.set(x-.28+k*.28,-.15+(k%2)*.3,0);g.add(c)}
+    if(i<4){const l=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,.9,8),M(C.fg));l.rotation.z=Math.PI/2;l.position.set(x+1,0,0);g.add(l)}
+  }
+  const tx=new THREE.Mesh(new THREE.BoxGeometry(.3,.3,.3),M(C.rose));g.add(tx);
+  const from=new THREE.Vector3(4.6,2.4,1),to=new THREE.Vector3(4,0,0);
+  return {g,tick:t=>{const k=(t%3)/3,e=k<.7?k/.7:1;tx.position.lerpVectors(from,to,e*e*(3-2*e));tx.scale.setScalar(k<.7?1:Math.max(.001,1-(k-.7)*3.3));tx.rotation.set(t,t*1.3,0);const pulse=k>.7?1-(k-.7)*3.3:0;blocks[4].material.opacity=.3+Math.max(0,pulse)*.4}};
+}
+const BUILD={cell:buildCell,nn:buildNN,chain:buildChain};
+
+AFRAME.registerComponent('lentelab',{
+  schema:{topic:{type:'string'},spin:{type:'number',default:.4}},
+  init(){this.m=BUILD[this.data.topic]();this.el.setObject3D('mesh',this.m.g)},
+  tick(t){const s=t/1000;this.m.g.rotation.y=this.data.topic==='cell'?s*this.data.spin:Math.sin(s*.5)*.5;this.m.tick(s)}
+});
+
+const INFO={
+  bio:{t:'Célula animal',x:'Toca una parte para ver qué hace.',p:{
+    'Membrana':'Controla qué entra y qué sale de la célula.',
+    'Núcleo':'Guarda el ADN y dirige la actividad de la célula.',
+    'Mitocondria':'Produce la energía (ATP) de la célula.',
+    'Retículo':'Fabrica y transporta proteínas y lípidos.',
+    'Golgi':'Empaqueta y envía las proteínas a su destino.'}},
+  ia:{t:'Cómo funciona un LLM',x:'El texto entra por la izquierda y sale una predicción por la derecha.',p:{
+    'Tokens':'“El gato come” se corta en 3 tokens (cubos amarillos).',
+    'Embeddings':'Cada token se vuelve una lista de números con su significado.',
+    'Atención':'Cada token mira a los demás para entender el contexto.',
+    'Predicción':'Elige la palabra más probable: “pescado” con 62%.'}},
+  bc:{t:'Blockchain',x:'Cada bloque guarda transacciones y el hash del bloque anterior.',p:{
+    'Bloque':'Contiene transacciones firmadas (cubos amarillos).',
+    'Enlace':'Cada bloque apunta al hash del anterior; si alguien altera uno, la cadena se rompe.',
+    'Transacción':'El cubo rosado es una transacción nueva entrando al último bloque.'}}
+};
+let active=null;
+function showSheet(k){
+  const s=document.getElementById('sheet'),I=INFO[k];active=k;
+  s.hidden=false;document.getElementById('sT').textContent=I.t;document.getElementById('sX').textContent=I.x;
+  const p=document.getElementById('sP');p.innerHTML='';
+  Object.keys(I.p).forEach(n=>{const b=document.createElement('button');b.type='button';b.textContent=n;b.onclick=()=>{[...p.children].forEach(c=>c.classList.toggle('on',c===b));document.getElementById('sX').textContent=I.p[n]};p.appendChild(b)});
+}
+window.addEventListener('load',()=>{
+  const st=document.getElementById('status');let found=0;
+  document.querySelectorAll('a-marker').forEach(m=>{
+    m.addEventListener('markerFound',()=>{found++;st.textContent='Tarjeta detectada';st.classList.add('found');if(active!==m.dataset.k)showSheet(m.dataset.k)});
+    m.addEventListener('markerLost',()=>{found=Math.max(0,found-1);if(!found){st.textContent='Apunta a una tarjeta';st.classList.remove('found')}});
+  });
+  window.addEventListener('camera-error',()=>{document.getElementById('err').hidden=false});
+});
+</script>
+</head>
+<body>
+<div class="top"><span class="brand">Lente<b>Lab</b></span><span class="status" id="status">Apunta a una tarjeta</span></div>
+<div class="sheet" id="sheet" hidden><h2 id="sT"></h2><p id="sX"></p><div class="parts" id="sP"></div></div>
+<div class="err" id="err" hidden><div><p><strong>No se pudo abrir la cámara.</strong></p><p>Permite el acceso a la cámara para este sitio en los ajustes del navegador y recarga la página.</p></div></div>
+
+<a-scene embedded vr-mode-ui="enabled: false" loading-screen="enabled: false"
+  renderer="logarithmicDepthBuffer: true; precision: medium;"
+  arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono; patternRatio: 0.5; cameraParametersUrl: data/camera_para.dat; sourceWidth: 1280; sourceHeight: 960; displayWidth: 1280; displayHeight: 960;">
+  <a-entity light="type: ambient; intensity: 0.7"></a-entity>
+  <a-entity light="type: directional; intensity: 0.9" position="1 3 2"></a-entity>
+
+  <a-marker type="pattern" url="data/bio.patt" data-k="bio" emitevents="true" smooth="true" smoothCount="8" smoothTolerance="0.01" smoothThreshold="5">
+    <a-entity lentelab="topic: cell" position="0 0.47 0" scale="0.2 0.2 0.2"></a-entity>
+  </a-marker>
+  <a-marker type="pattern" url="data/ia.patt" data-k="ia" emitevents="true" smooth="true" smoothCount="8" smoothTolerance="0.01" smoothThreshold="5">
+    <a-entity lentelab="topic: nn" position="0 0.4 0" scale="0.11 0.11 0.11"></a-entity>
+  </a-marker>
+  <a-marker type="pattern" url="data/bc.patt" data-k="bc" emitevents="true" smooth="true" smoothCount="8" smoothTolerance="0.01" smoothThreshold="5">
+    <a-entity lentelab="topic: chain" position="0 0.25 0" scale="0.085 0.085 0.085"></a-entity>
+  </a-marker>
+
+  <a-entity camera></a-entity>
+</a-scene>
+</body>
+</html>
