@@ -74,7 +74,7 @@ function buildMapa(){
   const ring=[];for(let k=0;k<=64;k++){const a=k/64*Math.PI*2;ring.push(new THREE.Vector3(Math.cos(a)*.6,.42,Math.sin(a)*.6))}
   g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(ring),new THREE.LineBasicMaterial({color:C.amber,transparent:true,opacity:.35})));
   const tr=new THREE.Mesh(new THREE.BoxGeometry(.07,.07,.07),M(C.amber,{emissive:0x5a3a08}));g.add(tr);
-  return {g,tick(t){g.rotation.y=t*.25;halo.scale.setScalar(1+.12*Math.sin(t*3));
+  return {g,tick(t){halo.scale.setScalar(1+.12*Math.sin(t*3));
     pul.forEach((s,i)=>{const f=(t*.6+i*.2)%1;s.position.lerpVectors(Cn,P[i],f)});
     const seg=t/1.3,i=Math.floor(seg)%5,k=ease(seg%1),a=P[i],b=P[(i+1)%5];
     tr.position.lerpVectors(a,b,k);tr.position.y+=Math.sin(Math.PI*k)*.18;tr.rotation.set(t*2,t*2.5,0);}};
@@ -92,7 +92,7 @@ function buildTokens(){
     const n=label(id,.05,{color:'#C9D3DF',bold:false});n.position.set(0,-.12,0);it.add(n);
     it.userData.x=cx;g.add(it);items.push(it);});
   const cnt=label('20 caracteres → 5 tokens',.07,{color:HEX.cyan});cnt.position.set(0,.68,0);g.add(cnt);
-  return {g,tick(t){const k=t%8;g.rotation.y=Math.sin(t*.4)*.25;
+  return {g,tick(t){const k=t%8;
     sent.material.opacity=k<1.2?1:clamp(1-(k-1.2)/.6,.3,1);
     items.forEach((it,i)=>{const s=1.4+i*.45,e=ease((k-s)/.6);it.visible=k>=s;
       it.position.set(it.userData.x*e,.95+(.35-.95)*e,0);it.scale.setScalar(.4+.6*e);});
@@ -113,7 +113,7 @@ function buildEmb(){
   const clus=G.map(([n,p,r,c])=>{const s=new THREE.Mesh(new THREE.SphereGeometry(r,24,16),new THREE.MeshBasicMaterial({color:C[c],transparent:true,opacity:0,depthWrite:false}));s.position.set(...p);g.add(s);
     const l=label(n,.065,{color:'#0B1018',bg:HEX[c]});l.position.set(p[0],p[1]+r+.06,p[2]);g.add(l);return {s,l}});
   const vec=label('gato → [0.21, −1.30, 0.88, … miles más]',.065,{color:HEX.fg});vec.position.set(0,1.12,0);g.add(vec);
-  return {g,tick(t){const k=t%9;g.rotation.y=t*.3;
+  return {g,tick(t){const k=t%9;
     pts.forEach((it,i)=>{const e=ease((k-.8-i*.08)/1.4);it.position.lerpVectors(O,it.userData.p,e)});
     clus.forEach(({s,l})=>{const v=clamp((k-3.2)/.8);s.material.opacity=v*.16;l.material.opacity=v;});}};
 }
@@ -134,7 +134,7 @@ function buildAtt(){
       const geo=new THREE.TubeGeometry(curve,48,.006+w*.035,10,false),m=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:C.amber,transparent:true,opacity:.35+w*.65}));
       geo.setDrawRange(0,0);arcs.add(m);const top=curve.getPoint(.5);const pl=label(Math.round(w*100)+'%',.06,{color:HEX.amber});pl.position.set(top.x,top.y+.07,0);pl.material.opacity=0;arcs.add(pl);
       parts.push({geo,n:geo.index.count,pl});});}
-  return {g,tick(t){const k=t%9,i=k<4.5?0:1,lk=k%4.5;if(i!==cur)setPhase(i);g.rotation.y=Math.sin(t*.35)*.3;
+  return {g,tick(t){const k=t%9,i=k<4.5?0:1,lk=k%4.5;if(i!==cur)setPhase(i);
     parts.forEach(p=>{const e=ease((lk-.3)/1.1);p.geo.setDrawRange(0,Math.floor(p.n*e/3)*3);p.pl.material.opacity=clamp((lk-1.3)/.5);});}};
 }
 
@@ -144,7 +144,7 @@ function buildPred(){
   const s1=label('El gato come ___',.1),s2=label('El gato come pescado',.1,{color:HEX.rose});[s1,s2].forEach(s=>{s.position.set(0,1.08,0);g.add(s)});
   const bars=R.map(([w,p],i)=>{const geo=new THREE.BoxGeometry(.2,1,.2);geo.translate(0,.5,0);const b=new THREE.Mesh(geo,M(i===0?C.rose:C.violet));b.position.set(X[i],0,0);g.add(b);
     const h=.75*p/62,l=label(`${w} ${p}%`,.06,{color:i===0?HEX.rose:HEX.violet});g.add(l);return {b,h,l,x:X[i]}});
-  return {g,tick(t){const k=t%8;g.rotation.y=Math.sin(t*.35)*.35;
+  return {g,tick(t){const k=t%8;
     bars.forEach((o,i)=>{const e=ease((k-.6-i*.12)/1.2),h=Math.max(.001,o.h*e);o.b.scale.y=h;o.l.position.set(o.x,h+.07,0);o.l.material.opacity=clamp((k-1.4)/.5);});
     const done=k>3.2;s1.visible=!done;s2.visible=done;bars[0].b.material.emissive.setHex(done?0x5a1a24:0x000000);}};
 }
@@ -160,7 +160,7 @@ function buildGen(){
   const cone=new THREE.Mesh(new THREE.ConeGeometry(.035,.08,12),new THREE.MeshBasicMaterial({color:C.violet}));const a=Math.PI*1.6;cone.position.set(Math.cos(a)*.2,Math.sin(a)*.2,0);cone.rotation.z=a;loop.add(cone);
   const l1=label('↻ el texto vuelve a entrar al modelo',.065,{color:HEX.violet});l1.position.set(0,1.0,0);g.add(l1);
   const vt=[];for(let v=1;v<=3;v++){const s=label('Vuelta '+v+': +1 token',.065,{color:HEX.rose});s.position.set(0,.88,0);g.add(s);vt.push(s)}
-  return {g,tick(t){const k=t%9;g.rotation.y=Math.sin(t*.35)*.3;loop.rotation.z=-t*1.5;
+  return {g,tick(t){const k=t%9;loop.rotation.z=-t*1.5;
     let showing=-1;
     items.forEach((it,i)=>{if(i<3){it.visible=true;return}const s=1.2+(i-3)*2,e=ease((k-s-.7)/.4);it.visible=k>=s+.7;it.scale.setScalar(.3+.7*e);if(k>=s)showing=i-3;
       if(k>=s&&k<s+.7){think.visible=true;think.position.copy(it.position);think.material.opacity=.5+.5*Math.sin(k*14)}});
