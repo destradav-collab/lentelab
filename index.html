@@ -2,12 +2,17 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
 <title>LenteLab RA</title>
 <script src="lib/aframe.min.js"></script>
 <script src="lib/aframe-ar.js"></script>
 <style>
 [hidden]{display:none!important}
+html,body{touch-action:none}
+.zoom{position:fixed;z-index:11;right:calc(env(safe-area-inset-right,0px) + 12px);top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px}
+.zoom button{width:46px;height:46px;border-radius:50%;border:1px solid var(--line);background:rgba(11,16,24,.85);color:var(--fg);font:600 22px/1 system-ui,sans-serif;display:flex;align-items:center;justify-content:center}
+.zoom button.zv{font-size:12px;color:var(--holo)}
+.zoom button:active{border-color:var(--holo)}
 :root{--bg:#0B1018;--fg:#E7EDF4;--muted:#95A3B5;--holo:#6FE3E8;--amber:#F3B44E;--line:#243245}
 html{background:#000}
 html,body{margin:0;height:100%;overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--fg)}
@@ -26,6 +31,16 @@ html,body{margin:0;height:100%;overflow:hidden;font-family:system-ui,-apple-syst
 .err{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg);text-align:center;line-height:1.5}
 </style>
 <script>
+
+/* zoom: pellizco con dos dedos o botones */
+window.LZ=1;
+function setZoom(z){window.LZ=Math.min(3,Math.max(.4,z));const v=document.getElementById('zv');if(v)v.textContent=window.LZ.toFixed(1)+'×';}
+(function(){let d0=0,z0=1;const dist=e=>Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+  window.addEventListener('touchstart',e=>{if(e.touches.length===2){d0=dist(e);z0=window.LZ;}},{passive:true});
+  window.addEventListener('touchmove',e=>{if(e.touches.length===2&&d0){e.preventDefault();setZoom(z0*dist(e)/d0);}},{passive:false});
+  window.addEventListener('touchend',e=>{if(e.touches.length<2)d0=0;});
+  window.addEventListener('gesturestart',e=>e.preventDefault());
+  window.addEventListener('wheel',e=>{e.preventDefault();setZoom(window.LZ*(e.deltaY<0?1.1:1/1.1));},{passive:false});})();
 const THREE = AFRAME.THREE;
 const C={holo:0x6FE3E8,amber:0xF3B44E,rose:0xF07A8B,violet:0xA58BF0,orange:0xF39A4E,fg:0xE7EDF4};
 const M=(c,o)=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.45,metalness:.1},o||{}));
@@ -75,8 +90,8 @@ const BUILD={cell:buildCell,nn:buildNN,chain:buildChain};
 
 AFRAME.registerComponent('lentelab',{
   schema:{topic:{type:'string'},spin:{type:'number',default:.4}},
-  init(){this.m=BUILD[this.data.topic]();this.el.setObject3D('mesh',this.m.g)},
-  tick(t){const s=t/1000;this.m.g.rotation.y=this.data.topic==='cell'?s*this.data.spin:Math.sin(s*.5)*.5;this.m.tick(s)}
+  init(){this.m=BUILD[this.data.topic]();this.el.setObject3D('mesh',this.m.g);this.base=null},
+  tick(t){if(!this.base)this.base=this.el.object3D.scale.clone();this.el.object3D.scale.copy(this.base).multiplyScalar(window.LZ);const s=t/1000;this.m.g.rotation.y=this.data.topic==='cell'?s*this.data.spin:Math.sin(s*.5)*.5;this.m.tick(s)}
 });
 
 const INFO={
@@ -116,6 +131,7 @@ window.addEventListener('load',()=>{
 <body>
 <div class="top"><span class="brand">Lente<b>Lab</b></span><span class="status" id="status">Apunta a una tarjeta</span></div>
 <div class="sheet" id="sheet" hidden><h2 id="sT"></h2><p id="sX"></p><div class="parts" id="sP"></div></div>
+<div class="zoom"><button type="button" id="zin" aria-label="Acercar" onclick="setZoom(LZ*1.25)">+</button><button type="button" class="zv" id="zv" aria-label="Restablecer zoom" onclick="setZoom(1)">1.0×</button><button type="button" id="zout" aria-label="Alejar" onclick="setZoom(LZ/1.25)">−</button></div>
 <div class="err" id="err" hidden><div><p><strong>No se pudo abrir la cámara.</strong></p><p>Permite el acceso a la cámara para este sitio en los ajustes del navegador y recarga la página.</p></div></div>
 
 <a-scene embedded vr-mode-ui="enabled: false" loading-screen="enabled: false"
