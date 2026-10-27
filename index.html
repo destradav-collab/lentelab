@@ -91,7 +91,7 @@ const BUILD={cell:buildCell,nn:buildNN,chain:buildChain};
 AFRAME.registerComponent('lentelab',{
   schema:{topic:{type:'string'},spin:{type:'number',default:.4}},
   init(){this.m=BUILD[this.data.topic]();this.el.setObject3D('mesh',this.m.g);this.base=null},
-  tick(t){if(!this.base)this.base=this.el.object3D.scale.clone();this.el.object3D.scale.copy(this.base).multiplyScalar(window.LZ);const s=t/1000;this.m.g.rotation.y=this.data.topic==='cell'?s*this.data.spin:Math.sin(s*.5)*.5;this.m.tick(s)}
+  tick(t){if(!this.base)this.base=this.el.object3D.scale.clone();this.el.object3D.scale.copy(this.base).multiplyScalar(window.LZ);const s=t/1000;this.m.tick(s)}
 });
 
 const INFO={
